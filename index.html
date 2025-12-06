@@ -103,7 +103,15 @@
             if (!isOpen) return null;
             return (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
-                    <form onSubmit={(e) => { e.preventDefault(); onConfirm(item.id, parseFloat(val)); setVal(''); onClose(); }} 
+                    <form onSubmit={(e) => { 
+                        e.preventDefault(); 
+                        const num = parseFloat(val);
+                        if (!isNaN(num)) {
+                            onConfirm(item.id, num); 
+                            setVal(''); 
+                            onClose(); 
+                        }
+                    }} 
                         className="bg-dark-card w-full max-w-sm rounded-2xl p-6 border border-dark-border shadow-2xl">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-xl font-bold text-slate-100">Add {item.name}</h3>
@@ -363,8 +371,9 @@
                 const delta = prevTotal === 0 ? (currTotal > 0 ? 100 : 0) : ((currTotal - prevTotal) / prevTotal) * 100;
                 const deltaStr = (delta > 0 ? '+' : '') + delta.toFixed(0) + '%';
 
-                // 2. Streaks
-                const dates = [...new Set(logs.filter(l => l.itemId === selectedId).map(l => new Date(l.timestamp).toDateString()))].map(d => new Date(d).getTime()).sort((a,b) => b-a);
+                // 2. Streaks & Inception Logic
+                const allItemLogs = logs.filter(l => l.itemId === selectedId);
+                const dates = [...new Set(allItemLogs.map(l => new Date(l.timestamp).toDateString()))].map(d => new Date(d).getTime()).sort((a,b) => b-a);
                 let currentStreak = 0;
                 const todayTime = new Date().setHours(0,0,0,0);
                 
@@ -375,6 +384,14 @@
                         if (dates[i] === checkDate - 86400000) { currentStreak++; checkDate = dates[i]; } else break;
                     }
                 }
+
+                // Calculate days since this specific item started being tracked
+                const firstLogTimestamp = allItemLogs.length > 0 ? Math.min(...allItemLogs.map(l => new Date(l.timestamp).getTime())) : Date.now();
+                const daysSinceInception = Math.max(1, Math.ceil((new Date().getTime() - firstLogTimestamp) / (1000 * 60 * 60 * 24)));
+                
+                // Use the smaller of: Selected Period OR Actual Days Since Start
+                // This prevents "Daily Avg" from being diluted by empty days before the item existed
+                const effectiveDaysCount = Math.min(daysCount, daysSinceInception);
 
                 // 3. Chart Bucketing
                 const bucketMap = new Map();
@@ -429,10 +446,10 @@
                     deltaStr: `${deltaStr} vs prev`,
                     isPositive: delta >= 0,
                     currentStreak,
-                    avg: (currTotal / daysCount).toFixed(1),
+                    avg: (currTotal / effectiveDaysCount).toFixed(1),
                     chartLabels: labels,
                     chartData,
-                    allLogs: logs.filter(l => l.itemId === selectedId)
+                    allLogs: allItemLogs
                 };
 
             }, [selectedId, period, logs, chartType]);
@@ -534,6 +551,14 @@
                         const blob = new Blob([JSON.stringify({items, logs})], {type: 'application/json'});
                         const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'omnitrack_backup.json'; a.click();
                     }} className="w-full bg-slate-800 text-slate-300 font-bold py-4 rounded-xl border border-dark-border flex items-center justify-center gap-2"><Icon name="download" /> Export Data</button>
+
+                    <section className="bg-dark-card border border-dark-border p-5 rounded-2xl shadow-lg mt-4">
+                        <h3 className="text-lg font-bold text-white mb-2">Feedback & Support</h3>
+                        <p className="text-slate-400 text-sm mb-4">Found a bug or have a feature request?</p>
+                        <a href="https://github.com/gurkanctn/OmniTracker-Pro/issues" target="_blank" className="flex items-center justify-center gap-2 w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl border border-dark-border transition">
+                            <Icon name="github" size={20} /> Open GitHub Issues
+                        </a>
+                    </section>
                 </div>
             );
         };
