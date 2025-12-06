@@ -12,85 +12,41 @@
     <meta name="theme-color" content="#0f172a">
     <meta name="mobile-web-app-capable" content="yes">
     
-    <!-- Placeholder for dynamic manifest and icon -->
+    <!-- Dynamic Manifest & Icons -->
     <link rel="manifest" id="dynamic-manifest">
     <link rel="icon" type="image/png" id="dynamic-favicon">
     <link rel="apple-touch-icon" id="dynamic-apple-icon">
 
-    <!-- React & DOM -->
+    <!-- Libraries -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
-    <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <!-- Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
-    <!-- Tailwind Config for Mobile Feel -->
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        brand: {
-                            50: '#f0f9ff',
-                            100: '#e0f2fe',
-                            500: '#0ea5e9',
-                            600: '#0284c7',
-                            900: '#0c4a6e',
-                        },
-                        dark: {
-                            bg: '#0f172a',
-                            card: '#1e293b',
-                            text: '#f8fafc'
-                        }
+                        brand: { 50: '#f0f9ff', 500: '#0ea5e9', 600: '#0284c7', 900: '#0c4a6e' },
+                        dark: { bg: '#0f172a', card: '#1e293b', text: '#f8fafc', border: '#334155' }
                     },
-                    fontFamily: {
-                        sans: ['Inter', '-apple-system', 'system-ui', 'sans-serif'],
-                    }
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    animation: { 'fade-in': 'fadeIn 0.3s ease-out' },
+                    keyframes: { fadeIn: { '0%': { opacity: '0', transform: 'translateY(10px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } } }
                 }
             }
         }
     </script>
 
     <style>
-        /* Mobile Optimizations */
-        body {
-            background-color: #0f172a; /* Slate 900 */
-            color: #f8fafc;
-            -webkit-tap-highlight-color: transparent;
-            font-family: 'Inter', sans-serif;
-            overscroll-behavior-y: none; /* Prevents pull-to-refresh on mobile */
-        }
-        
-        /* Smooth scrolling */
-        .scroll-smooth {
-            -webkit-overflow-scrolling: touch;
-        }
-
-        /* Hide scrollbar but allow scroll */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-
-        /* Safe area for iPhones */
-        .safe-top {
-            padding-top: env(safe-area-inset-top);
-        }
-        .safe-bottom {
-            padding-bottom: env(safe-area-inset-bottom);
-        }
+        body { background-color: #0f172a; color: #f8fafc; -webkit-tap-highlight-color: transparent; font-family: 'Inter', sans-serif; overscroll-behavior-y: none; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .safe-top { padding-top: env(safe-area-inset-top); }
+        .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
     </style>
 </head>
 <body>
@@ -99,666 +55,544 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo, useRef } = React;
 
-        // --- PWA Helper: Generate Icon & Manifest on the fly ---
+        // --- PWA Initialization ---
         const usePWAInitialization = () => {
             useEffect(() => {
-                // 1. Generate Icon via Canvas
-                const canvas = document.createElement('canvas');
-                canvas.width = 512;
-                canvas.height = 512;
-                const ctx = canvas.getContext('2d');
-                
-                // Background
-                ctx.fillStyle = '#0ea5e9'; // Brand 500
-                ctx.beginPath();
-                ctx.roundRect(0, 0, 512, 512, 128); // Rounded square
-                ctx.fill();
-                
-                // Symbol (Simple Bar Chart)
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(120, 300, 80, 100);
-                ctx.fillRect(216, 200, 80, 200);
-                ctx.fillRect(312, 120, 80, 280);
+                const initPWA = async () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 512; canvas.height = 512;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#0f172a'; ctx.beginPath(); ctx.roundRect(0, 0, 512, 512, 128); ctx.fill();
+                    ctx.strokeStyle = '#0ea5e9'; ctx.lineWidth = 40; ctx.lineCap = 'round';
+                    ctx.beginPath(); ctx.moveTo(100, 400); ctx.lineTo(100, 300); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(256, 400); ctx.lineTo(256, 150); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(412, 400); ctx.lineTo(412, 250); ctx.stroke();
+                    
+                    const iconUrl = canvas.toDataURL('image/png');
+                    document.getElementById('dynamic-favicon').href = iconUrl;
+                    document.getElementById('dynamic-apple-icon').href = iconUrl;
 
-                const iconUrl = canvas.toDataURL('image/png');
-                
-                // Set Favicon & Apple Icon
-                document.getElementById('dynamic-favicon').href = iconUrl;
-                document.getElementById('dynamic-apple-icon').href = iconUrl;
+                    const manifest = {
+                        "name": "OmniTrack", "short_name": "OmniTrack", "start_url": window.location.href,
+                        "display": "standalone", "background_color": "#0f172a", "theme_color": "#0f172a",
+                        "orientation": "portrait", "icons": [{ "src": iconUrl, "sizes": "512x512", "type": "image/png" }]
+                    };
+                    const manifestBlob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+                    document.querySelector('#dynamic-manifest').setAttribute('href', URL.createObjectURL(manifestBlob));
 
-                // 2. Generate Manifest
-                const manifest = {
-                    "name": "OmniTrack",
-                    "short_name": "OmniTrack",
-                    "start_url": ".",
-                    "display": "standalone",
-                    "background_color": "#0f172a",
-                    "theme_color": "#0f172a",
-                    "orientation": "portrait",
-                    "icons": [
-                        {
-                            "src": iconUrl,
-                            "sizes": "512x512",
-                            "type": "image/png"
-                        }
-                    ]
+                    if ('serviceWorker' in navigator) {
+                        const swCode = `self.addEventListener('fetch', (e) => e.respondWith(fetch(e.request)));`;
+                        const swBlob = new Blob([swCode], {type: 'application/javascript'});
+                        try { await navigator.serviceWorker.register(URL.createObjectURL(swBlob)); } catch (e) {}
+                    }
                 };
-
-                const stringManifest = JSON.stringify(manifest);
-                const blob = new Blob([stringManifest], {type: 'application/json'});
-                const manifestURL = URL.createObjectURL(blob);
-                document.querySelector('#dynamic-manifest').setAttribute('href', manifestURL);
-
+                initPWA();
             }, []);
         };
 
-        // --- Utils ---
         const generateId = () => Math.random().toString(36).substr(2, 9);
-        
-        const formatDate = (date) => new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        
-        // --- Icons Component Wrapper ---
         const Icon = ({ name, size = 20, className = "" }) => {
-            useEffect(() => {
-                if (window.lucide) window.lucide.createIcons();
-            }, [name]);
+            useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [name]);
             return <i data-lucide={name} width={size} height={size} className={className}></i>;
         };
 
-        // --- Components ---
+        // --- COMPONENTS ---
 
-        // 1. INPUT MODAL
         const InputModal = ({ item, isOpen, onClose, onConfirm }) => {
             const [val, setVal] = useState('');
-
             if (!isOpen) return null;
-
-            const handleSubmit = (e) => {
-                e.preventDefault();
-                const num = parseFloat(val);
-                if (!isNaN(num)) {
-                    onConfirm(item.id, num);
-                    setVal('');
-                    onClose();
-                }
-            };
-
             return (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-                    <div className="bg-dark-card w-full max-w-sm rounded-2xl p-6 border border-slate-700 shadow-2xl animate-[fadeIn_0.2s_ease-out]">
-                        <h3 className="text-xl font-bold mb-1 text-slate-100">Add to {item.name}</h3>
-                        <p className="text-slate-400 text-sm mb-6">Enter a custom amount ({item.unit})</p>
-                        
-                        <form onSubmit={handleSubmit}>
-                            <input 
-                                autoFocus
-                                type="number" 
-                                step="any"
-                                value={val}
-                                onChange={(e) => setVal(e.target.value)}
-                                className="w-full bg-slate-800 text-white text-3xl font-bold p-4 rounded-xl text-center border-2 border-slate-600 focus:border-brand-500 outline-none mb-6"
-                                placeholder="0"
-                            />
-                            <div className="grid grid-cols-2 gap-4">
-                                <button type="button" onClick={onClose} className="p-4 rounded-xl font-semibold text-slate-400 hover:bg-slate-800 transition">Cancel</button>
-                                <button type="submit" className="p-4 rounded-xl font-bold bg-brand-600 text-white hover:bg-brand-500 transition shadow-lg shadow-brand-900/50">Add Entry</button>
-                            </div>
-                        </form>
-                    </div>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+                    <form onSubmit={(e) => { e.preventDefault(); onConfirm(item.id, parseFloat(val)); setVal(''); onClose(); }} 
+                        className="bg-dark-card w-full max-w-sm rounded-2xl p-6 border border-dark-border shadow-2xl">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold text-slate-100">Add {item.name}</h3>
+                            <button type="button" onClick={onClose} className="text-slate-400"><Icon name="x" /></button>
+                        </div>
+                        <input autoFocus type="number" step="any" value={val} onChange={(e) => setVal(e.target.value)}
+                            className="w-full bg-slate-900 text-white text-4xl font-bold p-6 rounded-2xl text-center border-2 border-slate-700 focus:border-brand-500 outline-none mb-6" placeholder="0" />
+                        <button type="submit" className="w-full py-4 rounded-xl font-bold bg-brand-600 text-white shadow-lg text-lg">Confirm</button>
+                    </form>
                 </div>
             );
         };
 
-        // 2. TRACKER CARD
         const TrackerCard = ({ item, logs, onAdd }) => {
             const [showInput, setShowInput] = useState(false);
-
-            // Calculate today's total
             const todayTotal = useMemo(() => {
-                const startOfDay = new Date();
-                startOfDay.setHours(0,0,0,0);
-                return logs
-                    .filter(l => l.itemId === item.id && new Date(l.timestamp) >= startOfDay)
-                    .reduce((acc, curr) => acc + curr.value, 0);
+                const start = new Date(); start.setHours(0,0,0,0);
+                return logs.filter(l => l.itemId === item.id && new Date(l.timestamp) >= start)
+                           .reduce((acc, curr) => acc + curr.value, 0);
             }, [logs, item.id]);
 
             return (
-                <div className="bg-dark-card rounded-2xl p-5 border border-slate-800 shadow-lg relative overflow-hidden group">
-                    <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: item.color }}></div>
-                    
-                    <div className="flex justify-between items-start mb-4 pl-2">
-                        <div>
-                            <h3 className="text-lg font-bold text-slate-100">{item.name}</h3>
-                            <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">{item.unit}</p>
-                        </div>
+                <div className="bg-dark-card rounded-2xl p-5 border border-dark-border shadow-lg relative overflow-hidden group">
+                    <div className="absolute top-0 left-0 w-1.5 h-full" style={{ backgroundColor: item.color }}></div>
+                    <div className="flex justify-between items-start mb-4 pl-3">
+                        <div><h3 className="text-lg font-bold text-slate-100">{item.name}</h3><p className="text-xs text-slate-400 uppercase font-bold tracking-wider">{item.unit}</p></div>
                         <div className="text-right">
-                            <span className="block text-2xl font-black text-white">{Number.isInteger(todayTotal) ? todayTotal : todayTotal.toFixed(1)}</span>
-                            <span className="text-xs text-slate-500">Today</span>
+                            <span className="block text-3xl font-black text-white tracking-tight">{Number.isInteger(todayTotal)?todayTotal:todayTotal.toFixed(1)}</span>
+                            <span className="text-xs text-brand-500 font-bold bg-brand-500/10 px-2 py-0.5 rounded">TODAY</span>
                         </div>
                     </div>
-
-                    <div className="grid grid-cols-3 gap-2 pl-2">
-                        <button 
-                            onClick={() => onAdd(item.id, item.step)}
-                            className="col-span-2 bg-slate-800 hover:bg-slate-700 active:scale-95 transition-all py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-brand-100 border border-slate-700/50"
-                        >
-                            <Icon name="plus" size={16} />
-                            Quick Add {item.step}
-                        </button>
-                        <button 
-                            onClick={() => setShowInput(true)}
-                            className="bg-slate-800 hover:bg-slate-700 active:scale-95 transition-all py-3 rounded-xl flex items-center justify-center text-slate-400 border border-slate-700/50"
-                        >
-                            <Icon name="more-horizontal" size={20} />
-                        </button>
+                    <div className="grid grid-cols-4 gap-3 pl-3">
+                        <button onClick={() => onAdd(item.id, item.step)} className="col-span-3 bg-slate-800 active:scale-[0.98] transition-all py-3.5 rounded-xl flex items-center justify-center gap-2 font-bold text-slate-200 border border-slate-700 hover:border-brand-500/50"><Icon name="plus" size={18} /> Quick Add {item.step}</button>
+                        <button onClick={() => setShowInput(true)} className="col-span-1 bg-slate-800 active:scale-[0.98] transition-all py-3.5 rounded-xl flex items-center justify-center text-slate-400 border border-slate-700"><Icon name="edit-3" size={18} /></button>
                     </div>
-
-                    <InputModal 
-                        item={item} 
-                        isOpen={showInput} 
-                        onClose={() => setShowInput(false)} 
-                        onConfirm={onAdd}
-                    />
+                    <InputModal item={item} isOpen={showInput} onClose={() => setShowInput(false)} onConfirm={onAdd} />
                 </div>
             );
         };
 
-        // 3. CHART COMPONENT
-        const ChartView = ({ data, labels, color, title, type = 'bar' }) => {
+        const Heatmap = ({ logs, color }) => {
+            // Generate last 15 weeks of data
+            const grid = useMemo(() => {
+                const weeks = [];
+                const today = new Date();
+                const dataMap = {};
+                
+                logs.forEach(l => {
+                    const key = new Date(l.timestamp).toDateString();
+                    dataMap[key] = (dataMap[key] || 0) + l.value;
+                });
+                
+                const maxVal = Math.max(...Object.values(dataMap), 1);
+
+                for (let w = 14; w >= 0; w--) {
+                    const week = [];
+                    for (let d = 0; d < 7; d++) {
+                        const date = new Date(today);
+                        date.setDate(today.getDate() - (w * 7) + d - today.getDay()); // Align to Sun-Sat
+                        const key = date.toDateString();
+                        const val = dataMap[key] || 0;
+                        const opacity = val > 0 ? Math.max(0.3, val / maxVal) : 0.1;
+                        const isToday = key === today.toDateString();
+                        week.push({ date, val, opacity, isToday });
+                    }
+                    weeks.push(week);
+                }
+                return weeks;
+            }, [logs]);
+
+            return (
+                <div className="overflow-x-auto no-scrollbar pb-2 -mx-4 px-4">
+                    <div className="flex gap-1 min-w-max">
+                        {grid.map((week, i) => (
+                            <div key={i} className="flex flex-col gap-1">
+                                {week.map((day, j) => (
+                                    <div key={j} 
+                                        className={`w-3 h-3 rounded-sm transition-all ${day.isToday ? 'ring-1 ring-white' : ''}`}
+                                        style={{ backgroundColor: day.val > 0 ? color : '#334155', opacity: day.val > 0 ? day.opacity : 0.3 }}
+                                        title={`${day.date.toLocaleDateString()}: ${day.val}`}
+                                    ></div>
+                                ))}
+                            </div>
+                        ))}
+                    </div>
+                    <div className="text-[10px] text-slate-500 mt-1 text-right">Last 15 Weeks</div>
+                </div>
+            );
+        };
+
+        const StatCard = ({ label, value, subValue, isGood = true }) => (
+            <div className="bg-slate-800/40 p-4 rounded-xl border border-dark-border">
+                <div className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">{label}</div>
+                <div className="text-2xl font-black text-white">{value}</div>
+                {subValue && (
+                    <div className={`text-xs mt-1 font-bold flex items-center gap-1 ${isGood ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {subValue}
+                    </div>
+                )}
+            </div>
+        );
+
+        const ChartView = ({ data, labels, color, type = 'bar' }) => {
             const canvasRef = useRef(null);
             const chartRef = useRef(null);
-
+            
             useEffect(() => {
                 if (!canvasRef.current) return;
+                if (chartRef.current) chartRef.current.destroy();
 
-                // Destroy previous chart
-                if (chartRef.current) {
-                    chartRef.current.destroy();
-                }
-
-                const ctx = canvasRef.current.getContext('2d');
+                const isLine = type === 'line';
                 
-                // Config
-                chartRef.current = new Chart(ctx, {
-                    type: type,
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: title,
-                            data: data,
-                            backgroundColor: color,
+                chartRef.current = new Chart(canvasRef.current.getContext('2d'), {
+                    type: isLine ? 'line' : 'bar',
+                    data: { 
+                        labels, 
+                        datasets: [{ 
+                            data, 
+                            backgroundColor: isLine ? color + '20' : color, 
                             borderColor: color,
-                            borderWidth: 1,
-                            borderRadius: 4,
-                            maxBarThickness: 30
-                        }]
+                            borderWidth: isLine ? 2 : 0,
+                            borderRadius: isLine ? 0 : 4, 
+                            barThickness: 'flex', 
+                            maxBarThickness: 32,
+                            fill: isLine,
+                            tension: 0.4,
+                            pointRadius: isLine ? 2 : 0
+                        }] 
                     },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                backgroundColor: '#1e293b',
-                                titleColor: '#f8fafc',
-                                bodyColor: '#cbd5e1',
-                                borderColor: '#334155',
-                                borderWidth: 1,
-                                padding: 10,
-                                displayColors: false,
-                            }
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false, 
+                        plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } }, 
+                        scales: { 
+                            y: { 
+                                beginAtZero: true, 
+                                grid: { color: '#334155', drawBorder: false }, 
+                                ticks: { color: '#64748b', font: {size: 10} } 
+                            }, 
+                            x: { 
+                                grid: { display: false }, 
+                                ticks: { color: '#64748b', font: {size: 10}, maxRotation: 0, autoSkip: true, maxTicksLimit: 6 } 
+                            } 
                         },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                grid: { color: '#334155', drawBorder: false },
-                                ticks: { color: '#94a3b8' }
-                            },
-                            x: {
-                                grid: { display: false },
-                                ticks: { color: '#94a3b8' }
-                            }
-                        }
+                        interaction: { mode: 'nearest', axis: 'x', intersect: false }
                     }
                 });
-
-                return () => {
-                    if (chartRef.current) chartRef.current.destroy();
-                };
-            }, [data, labels, color]);
-
-            return (
-                <div className="h-64 w-full">
-                    <canvas ref={canvasRef}></canvas>
-                </div>
-            );
+                return () => chartRef.current?.destroy();
+            }, [data, labels, color, type]);
+            
+            return <div className="h-48 w-full"><canvas ref={canvasRef}></canvas></div>;
         };
 
-        // 4. STATS TABLE
-        const StatsTable = ({ logs, period }) => {
-            if (logs.length === 0) return <div className="text-center p-4 text-slate-500">No data for this period.</div>;
+        const HourlyChart = ({ logs, color }) => {
+             const canvasRef = useRef(null);
+             const chartRef = useRef(null);
+             
+             const data = useMemo(() => {
+                 const hours = Array(24).fill(0);
+                 logs.forEach(l => {
+                     const h = new Date(l.timestamp).getHours();
+                     hours[h] += l.value;
+                 });
+                 return hours;
+             }, [logs]);
 
-            const total = logs.reduce((sum, l) => sum + l.value, 0);
-            const avg = total / (logs.length || 1);
-            const max = Math.max(...logs.map(l => l.value));
-
-            return (
-                <div className="grid grid-cols-3 gap-2 mt-4 mb-6">
-                    <div className="bg-slate-800/50 p-3 rounded-lg text-center border border-slate-700">
-                        <div className="text-xs text-slate-400 uppercase">Total</div>
-                        <div className="text-xl font-bold text-white">{Number.isInteger(total) ? total : total.toFixed(1)}</div>
-                    </div>
-                    <div className="bg-slate-800/50 p-3 rounded-lg text-center border border-slate-700">
-                        <div className="text-xs text-slate-400 uppercase">Avg / Entry</div>
-                        <div className="text-xl font-bold text-white">{avg.toFixed(1)}</div>
-                    </div>
-                    <div className="bg-slate-800/50 p-3 rounded-lg text-center border border-slate-700">
-                        <div className="text-xs text-slate-400 uppercase">Max Entry</div>
-                        <div className="text-xl font-bold text-white">{max}</div>
-                    </div>
-                </div>
-            );
+             useEffect(() => {
+                if (!canvasRef.current) return;
+                if (chartRef.current) chartRef.current.destroy();
+                chartRef.current = new Chart(canvasRef.current.getContext('2d'), {
+                    type: 'line',
+                    data: { 
+                        labels: Array.from({length:24}, (_,i) => i), 
+                        datasets: [{ 
+                            data, 
+                            borderColor: color, 
+                            backgroundColor: color + '20', 
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 0
+                        }] 
+                    },
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false, 
+                        plugins: { legend: { display: false } }, 
+                        scales: { y: { display: false }, x: { display: false } } 
+                    }
+                });
+                return () => chartRef.current?.destroy();
+            }, [data, color]);
+            return <div className="h-16 w-full"><canvas ref={canvasRef}></canvas></div>;
         };
 
-        // --- MAIN APPLICATION VIEWS ---
+        // --- VIEWS ---
 
         const Dashboard = ({ items, logs }) => {
-            const [period, setPeriod] = useState('week'); // week, month, quarter, year
-            const [selectedItemId, setSelectedItemId] = useState(items[0]?.id);
+            const [selectedId, setSelectedId] = useState(items[0]?.id);
+            const [period, setPeriod] = useState('7d');
+            const [chartType, setChartType] = useState('bar'); // bar, line
+            
+            const selectedItem = items.find(i => i.id === selectedId);
 
-            const selectedItem = items.find(i => i.id === selectedItemId);
-
-            // Filter logic
-            const processedData = useMemo(() => {
-                if (!selectedItem) return { labels: [], data: [], filteredLogs: [] };
-
+            const stats = useMemo(() => {
+                if (!selectedItem) return null;
                 const now = new Date();
+                
+                // 1. Logic for Start Date & Grouping
                 let startDate = new Date();
-                let dateFormat = 'day';
+                let prevStartDate = new Date();
+                let grouping = 'day'; // day, week, month
+                let daysCount = 7;
 
-                if (period === 'week') startDate.setDate(now.getDate() - 7);
-                if (period === 'month') startDate.setMonth(now.getMonth() - 1);
-                if (period === 'quarter') startDate.setMonth(now.getMonth() - 3);
-                if (period === 'year') {
-                    startDate.setFullYear(now.getFullYear() - 1);
-                    dateFormat = 'month';
+                switch(period) {
+                    case '7d':
+                        startDate.setDate(now.getDate() - 7);
+                        prevStartDate.setDate(now.getDate() - 14);
+                        daysCount = 7;
+                        grouping = 'day';
+                        break;
+                    case '30d':
+                        startDate.setDate(now.getDate() - 30);
+                        prevStartDate.setDate(now.getDate() - 60);
+                        daysCount = 30;
+                        grouping = 'day';
+                        break;
+                    case '3m':
+                        startDate.setDate(now.getDate() - 90);
+                        prevStartDate.setDate(now.getDate() - 180);
+                        daysCount = 90;
+                        grouping = 'week';
+                        break;
+                    case 'ytd':
+                        startDate = new Date(now.getFullYear(), 0, 1);
+                        prevStartDate = new Date(now.getFullYear() - 1, 0, 1); // rough comparison
+                        daysCount = Math.floor((now - startDate) / (1000 * 60 * 60 * 24)) + 1;
+                        grouping = daysCount > 60 ? 'week' : 'day';
+                        if (daysCount > 180) grouping = 'month';
+                        break;
+                    case '1y':
+                        startDate.setFullYear(now.getFullYear() - 1);
+                        prevStartDate.setFullYear(now.getFullYear() - 2);
+                        daysCount = 365;
+                        grouping = 'month';
+                        break;
                 }
+                
+                // Align start dates to beginning of day
+                startDate.setHours(0,0,0,0);
+                prevStartDate.setHours(0,0,0,0);
+                
+                const currentLogs = logs.filter(l => l.itemId === selectedId && new Date(l.timestamp) >= startDate);
+                const prevLogs = logs.filter(l => l.itemId === selectedId && new Date(l.timestamp) >= prevStartDate && new Date(l.timestamp) < startDate);
 
-                // Filter logs for item and date range
-                const filteredLogs = logs.filter(l => 
-                    l.itemId === selectedItemId && new Date(l.timestamp) >= startDate
-                );
+                const currTotal = currentLogs.reduce((a,b) => a+b.value, 0);
+                const prevTotal = prevLogs.reduce((a,b) => a+b.value, 0);
+                const delta = prevTotal === 0 ? (currTotal > 0 ? 100 : 0) : ((currTotal - prevTotal) / prevTotal) * 100;
+                const deltaStr = (delta > 0 ? '+' : '') + delta.toFixed(0) + '%';
 
-                // Aggregate for chart
-                const groups = {};
-                // Pre-fill keys to show empty bars
-                if (dateFormat === 'day') {
-                    for(let d = new Date(startDate); d <= now; d.setDate(d.getDate() + 1)) {
-                        groups[d.toDateString()] = 0;
+                // 2. Streaks
+                const dates = [...new Set(logs.filter(l => l.itemId === selectedId).map(l => new Date(l.timestamp).toDateString()))].map(d => new Date(d).getTime()).sort((a,b) => b-a);
+                let currentStreak = 0;
+                const todayTime = new Date().setHours(0,0,0,0);
+                
+                if (dates.length > 0 && (dates[0] === todayTime || dates[0] === todayTime - 86400000)) {
+                    currentStreak = 1;
+                    let checkDate = dates[0];
+                    for(let i=1; i<dates.length; i++) {
+                        if (dates[i] === checkDate - 86400000) { currentStreak++; checkDate = dates[i]; } else break;
                     }
                 }
 
-                filteredLogs.forEach(l => {
-                    const d = new Date(l.timestamp);
-                    let key = d.toDateString();
-                    if (dateFormat === 'month') key = `${d.getFullYear()}-${d.getMonth()}`;
+                // 3. Chart Bucketing
+                const bucketMap = new Map();
+                
+                // Pre-fill buckets
+                let cursor = new Date(startDate);
+                while(cursor <= now) {
+                    let key;
+                    if (grouping === 'day') key = cursor.toDateString();
+                    else if (grouping === 'week') {
+                        // Start of week (Sunday)
+                        const day = cursor.getDay();
+                        const diff = cursor.getDate() - day;
+                        const w = new Date(cursor); w.setDate(diff); w.setHours(0,0,0,0);
+                        key = w.toDateString();
+                    }
+                    else if (grouping === 'month') key = `${cursor.getFullYear()}-${cursor.getMonth()}`;
                     
-                    groups[key] = (groups[key] || 0) + l.value;
-                });
+                    if (!bucketMap.has(key)) bucketMap.set(key, 0);
+                    cursor.setDate(cursor.getDate() + 1);
+                }
 
-                const labels = Object.keys(groups).map(k => {
-                    if (dateFormat === 'month') {
-                        const [y, m] = k.split('-');
-                        return new Date(y, m).toLocaleDateString('en-US', { month: 'short' });
+                currentLogs.forEach(l => {
+                    const d = new Date(l.timestamp);
+                    let key;
+                    if (grouping === 'day') key = d.toDateString();
+                    else if (grouping === 'week') {
+                         const day = d.getDay();
+                         const diff = d.getDate() - day;
+                         const w = new Date(d); w.setDate(diff); w.setHours(0,0,0,0);
+                         key = w.toDateString();
                     }
-                    return new Date(k).toLocaleDateString('en-US', { weekday: 'narrow', day: 'numeric' });
+                    else if (grouping === 'month') key = `${d.getFullYear()}-${d.getMonth()}`;
+                    
+                    if (bucketMap.has(key)) bucketMap.set(key, bucketMap.get(key) + l.value);
                 });
 
-                const data = Object.values(groups);
+                const labels = Array.from(bucketMap.keys()).map(k => {
+                    if (grouping === 'month') { const [y, m] = k.split('-'); return new Date(y, m).toLocaleDateString('en-US', { month: 'short' }); }
+                    return new Date(k).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                });
+                
+                const values = Array.from(bucketMap.values());
+                
+                // Handle Cumulative
+                const chartData = chartType === 'line' 
+                    ? values.reduce((acc, curr, i) => [...acc, curr + (acc[i-1] || 0)], []) 
+                    : values;
 
-                return { labels, data, filteredLogs };
+                return {
+                    currTotal,
+                    deltaStr: `${deltaStr} vs prev`,
+                    isPositive: delta >= 0,
+                    currentStreak,
+                    avg: (currTotal / daysCount).toFixed(1),
+                    chartLabels: labels,
+                    chartData,
+                    allLogs: logs.filter(l => l.itemId === selectedId)
+                };
 
-            }, [period, selectedItemId, logs, selectedItem]);
+            }, [selectedId, period, logs, chartType]);
 
-            if (items.length === 0) return <div className="p-8 text-center text-slate-500">Create items in settings to see stats.</div>;
+            if (!selectedItem) return <div className="p-8 text-center text-slate-500">No data found.</div>;
 
             return (
-                <div className="space-y-6 pb-24 animate-[fadeIn_0.3s_ease-out]">
-                    {/* Item Selector */}
-                    <div className="flex overflow-x-auto no-scrollbar gap-2 pb-2">
+                <div className="space-y-6 pb-24 animate-fade-in">
+                    {/* Item Scroller */}
+                    <div className="flex overflow-x-auto no-scrollbar gap-2 -mx-4 px-4">
                         {items.map(item => (
-                            <button
-                                key={item.id}
-                                onClick={() => setSelectedItemId(item.id)}
-                                className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold transition-colors ${
-                                    selectedItemId === item.id 
-                                    ? 'bg-brand-600 text-white' 
-                                    : 'bg-slate-800 text-slate-400 border border-slate-700'
-                                }`}
-                            >
+                            <button key={item.id} onClick={() => setSelectedId(item.id)}
+                                className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold transition-colors ${selectedId === item.id ? 'bg-brand-600 text-white shadow-lg shadow-brand-900/50' : 'bg-slate-800 text-slate-400 border border-dark-border'}`}>
                                 {item.name}
                             </button>
                         ))}
                     </div>
 
-                    {/* Period Selector */}
-                    <div className="bg-slate-800 p-1 rounded-xl flex">
-                        {['week', 'month', 'quarter', 'year'].map(p => (
-                            <button
-                                key={p}
-                                onClick={() => setPeriod(p)}
-                                className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${
-                                    period === p 
-                                    ? 'bg-brand-600 text-white shadow-lg' 
-                                    : 'text-slate-500 hover:text-slate-300'
-                                }`}
-                            >
-                                {p.charAt(0)}
-                            </button>
-                        ))}
+                    {/* Stat Cards */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <StatCard label={period === 'ytd' || period === '1y' ? "Total Volume" : "Period Total"} value={stats.currTotal} subValue={stats.deltaStr} isGood={stats.isPositive} />
+                        <StatCard label="Streak" value={`${stats.currentStreak} Days`} subValue="Keep it up!" isGood={true} />
+                        <StatCard label="Daily Avg" value={stats.avg} />
+                        <StatCard label="Entries" value={stats.allLogs.length} />
                     </div>
 
-                    {/* Content */}
-                    <div>
-                        <h2 className="text-xl font-bold text-white mb-2">Performance</h2>
-                        <div className="bg-dark-card border border-slate-800 rounded-2xl p-4 shadow-lg">
-                            <ChartView 
-                                labels={processedData.labels} 
-                                data={processedData.data} 
-                                color={selectedItem.color} 
-                                title={selectedItem.name} 
-                            />
+                    {/* Main Chart */}
+                    <div className="bg-dark-card border border-dark-border rounded-2xl p-4 shadow-lg">
+                        <div className="flex justify-between items-start mb-4">
+                            <div>
+                                <h4 className="text-sm font-bold text-slate-300 flex items-center gap-2 mb-2"><Icon name={chartType === 'line' ? 'trending-up' : 'bar-chart-2'} size={16}/> {chartType === 'line' ? 'Cumulative Growth' : 'Volume over Time'}</h4>
+                                <div className="flex bg-slate-800 rounded-lg p-0.5 overflow-x-auto max-w-[200px] no-scrollbar">
+                                    {['7d', '30d', '3m', 'ytd', '1y'].map(p => (
+                                        <button key={p} onClick={() => setPeriod(p)} className={`px-2.5 py-1 text-[10px] font-bold uppercase rounded-md whitespace-nowrap ${period === p ? 'bg-brand-600 text-white' : 'text-slate-500'}`}>{p}</button>
+                                    ))}
+                                </div>
+                            </div>
+                            <button onClick={() => setChartType(prev => prev === 'bar' ? 'line' : 'bar')} className="p-2 bg-slate-800 rounded-lg text-slate-400 border border-slate-700 hover:text-white">
+                                <Icon name={chartType === 'bar' ? 'trending-up' : 'bar-chart-2'} size={18} />
+                            </button>
                         </div>
-                        
-                        <h2 className="text-xl font-bold text-white mt-8 mb-2">Summary</h2>
-                        <StatsTable logs={processedData.filteredLogs} period={period} />
+                        <ChartView labels={stats.chartLabels} data={stats.chartData} color={selectedItem.color} type={chartType} />
+                    </div>
+
+                    {/* Heatmap */}
+                    <div className="bg-dark-card border border-dark-border rounded-2xl p-4 shadow-lg">
+                        <h4 className="text-sm font-bold text-slate-300 mb-3 flex items-center gap-2"><Icon name="grid" size={16}/> Consistency Map</h4>
+                        <Heatmap logs={stats.allLogs} color={selectedItem.color} />
+                    </div>
+
+                    {/* Hourly Distribution */}
+                    <div className="bg-dark-card border border-dark-border rounded-2xl p-4 shadow-lg overflow-hidden">
+                        <h4 className="text-sm font-bold text-slate-300 mb-2 flex items-center gap-2"><Icon name="clock" size={16}/> Activity by Hour</h4>
+                        <HourlyChart logs={stats.allLogs} color={selectedItem.color} />
+                        <div className="flex justify-between text-[10px] text-slate-500 mt-1 px-1">
+                            <span>12 AM</span><span>12 PM</span><span>11 PM</span>
+                        </div>
                     </div>
                 </div>
             );
         };
 
-        const Settings = ({ items, setItems, logs, setLogs, installPrompt }) => {
-            const [newItemName, setNewItemName] = useState('');
-            const [newItemUnit, setNewItemUnit] = useState('');
-            const [newItemStep, setNewItemStep] = useState('');
-
-            const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
-
-            const handleAddItem = (e) => {
+        const Settings = ({ items, setItems, logs, setLogs, installPrompt, isStandalone }) => {
+            const [name, setName] = useState(''); const [unit, setUnit] = useState(''); const [step, setStep] = useState('');
+            const addItem = (e) => {
                 e.preventDefault();
-                if (!newItemName || !newItemUnit) return;
-
-                const newItem = {
-                    id: generateId(),
-                    name: newItemName,
-                    unit: newItemUnit,
-                    step: parseFloat(newItemStep) || 1,
-                    color: colors[items.length % colors.length]
-                };
-
-                setItems([...items, newItem]);
-                setNewItemName('');
-                setNewItemUnit('');
-                setNewItemStep('');
+                setItems([...items, { id: generateId(), name, unit, step: parseFloat(step) || 1, color: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'][items.length % 5] }]);
+                setName(''); setUnit(''); setStep('');
             };
-
-            const handleDeleteItem = (id) => {
-                if (confirm('Delete this item and all its data? This cannot be undone.')) {
-                    setItems(items.filter(i => i.id !== id));
-                    setLogs(logs.filter(l => l.itemId !== id));
-                }
-            };
-
-            const handleExport = () => {
-                const dataStr = JSON.stringify({ items, logs });
-                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-                const exportFileDefaultName = 'omnitrack_backup.json';
-                const linkElement = document.createElement('a');
-                linkElement.setAttribute('href', dataUri);
-                linkElement.setAttribute('download', exportFileDefaultName);
-                linkElement.click();
-            };
-
-            const handleInstall = () => {
-                if (installPrompt) {
-                    installPrompt.prompt();
-                    installPrompt.userChoice.then((choiceResult) => {
-                        console.log(choiceResult.outcome);
-                    });
-                } else {
-                    alert("To install: \n\niOS: Tap 'Share' → 'Add to Home Screen'\n\nAndroid: Tap menu (⋮) → 'Install App'");
-                }
-            };
-
             return (
-                <div className="space-y-8 pb-24 animate-[fadeIn_0.3s_ease-out]">
-                    
-                    {/* App Installation */}
-                    <section className="bg-gradient-to-r from-brand-900 to-slate-900 border border-brand-500/30 p-5 rounded-2xl shadow-lg relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-4 opacity-10">
-                            <Icon name="download-cloud" size={80} />
-                        </div>
-                        <h3 className="text-lg font-bold text-white mb-2 relative z-10">Install OmniTrack</h3>
-                        <p className="text-sm text-brand-100 mb-4 relative z-10">Get the full experience by installing this app to your home screen.</p>
-                        <button 
-                            onClick={handleInstall}
-                            className="bg-brand-600 hover:bg-brand-500 text-white font-bold py-2 px-6 rounded-lg transition relative z-10 shadow-lg"
-                        >
-                            {installPrompt ? 'Install App' : 'How to Install'}
-                        </button>
-                    </section>
-                    
-                    {/* Add New Item */}
-                    <section className="bg-dark-card border border-slate-800 p-5 rounded-2xl shadow-lg">
-                        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                            <Icon name="plus-circle" className="text-brand-500"/> Create New Metric
-                        </h3>
-                        <form onSubmit={handleAddItem} className="space-y-4">
-                            <div>
-                                <label className="block text-xs text-slate-500 uppercase font-bold mb-1">Name</label>
-                                <input 
-                                    className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white focus:border-brand-500 outline-none transition" 
-                                    placeholder="e.g. Water"
-                                    value={newItemName}
-                                    onChange={e => setNewItemName(e.target.value)}
-                                    required
-                                />
-                            </div>
+                <div className="space-y-6 pb-24 animate-fade-in">
+                    {!isStandalone && (
+                         <section className="bg-gradient-to-r from-brand-900 to-slate-900 border border-brand-500/30 p-5 rounded-2xl shadow-lg relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-4 opacity-10"><Icon name="download-cloud" size={80} /></div>
+                            <h3 className="text-lg font-bold text-white mb-2 relative z-10">Install OmniTrack</h3>
+                            <button onClick={() => installPrompt ? installPrompt.prompt() : alert("Use browser menu to install.")} className="bg-brand-600 text-white font-bold py-2 px-6 rounded-lg relative z-10 shadow-lg">Install App</button>
+                        </section>
+                     )}
+                    <section className="bg-dark-card border border-dark-border p-5 rounded-2xl shadow-lg">
+                        <h3 className="text-lg font-bold text-white mb-4">New Metric</h3>
+                        <form onSubmit={addItem} className="space-y-4">
+                            <input className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white outline-none focus:border-brand-500" placeholder="Name (e.g. Water)" value={name} onChange={e => setName(e.target.value)} required />
                             <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs text-slate-500 uppercase font-bold mb-1">Unit</label>
-                                    <input 
-                                        className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white focus:border-brand-500 outline-none transition" 
-                                        placeholder="e.g. oz"
-                                        value={newItemUnit}
-                                        onChange={e => setNewItemUnit(e.target.value)}
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs text-slate-500 uppercase font-bold mb-1">Step (+)</label>
-                                    <input 
-                                        type="number"
-                                        step="any"
-                                        className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white focus:border-brand-500 outline-none transition" 
-                                        placeholder="Default 1"
-                                        value={newItemStep}
-                                        onChange={e => setNewItemStep(e.target.value)}
-                                    />
-                                </div>
+                                <input className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white outline-none focus:border-brand-500" placeholder="Unit" value={unit} onChange={e => setUnit(e.target.value)} required />
+                                <input type="number" className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white outline-none focus:border-brand-500" placeholder="Step" value={step} onChange={e => setStep(e.target.value)} />
                             </div>
-                            <button className="w-full bg-brand-600 hover:bg-brand-500 py-3 rounded-xl font-bold text-white shadow-lg shadow-brand-900/50 transition">
-                                Create Tracker
-                            </button>
+                            <button className="w-full bg-brand-600 py-3 rounded-xl font-bold text-white shadow-lg">Create</button>
                         </form>
                     </section>
-
-                    {/* Manage Items */}
-                    <section>
-                        <h3 className="text-lg font-bold text-white mb-4">Manage Items</h3>
-                        <div className="space-y-2">
-                            {items.map(item => (
-                                <div key={item.id} className="flex items-center justify-between bg-slate-800/50 border border-slate-800 p-4 rounded-xl">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-3 h-3 rounded-full" style={{backgroundColor: item.color}}></div>
-                                        <div>
-                                            <div className="font-bold text-slate-200">{item.name}</div>
-                                            <div className="text-xs text-slate-500">{item.unit}</div>
-                                        </div>
-                                    </div>
-                                    <button onClick={() => handleDeleteItem(item.id)} className="text-red-400 hover:bg-red-900/20 p-2 rounded-lg transition">
-                                        <Icon name="trash-2" size={18} />
-                                    </button>
-                                </div>
-                            ))}
-                            {items.length === 0 && <div className="text-slate-500 text-sm italic">No items created yet.</div>}
-                        </div>
-                    </section>
-
-                    {/* Data Handling */}
-                    <section className="bg-slate-800/30 p-5 rounded-2xl border border-dashed border-slate-700">
-                        <h3 className="text-lg font-bold text-white mb-4">Data Management</h3>
-                        <p className="text-sm text-slate-400 mb-4">Your data is stored locally on this device. Export it regularly to keep a backup.</p>
-                        <button onClick={handleExport} className="w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 transition">
-                            <Icon name="download" size={18} /> Export Data (JSON)
-                        </button>
-                    </section>
+                    <div className="space-y-2">
+                        {items.map(item => (
+                            <div key={item.id} className="flex justify-between bg-slate-800/50 border border-dark-border p-4 rounded-xl items-center">
+                                <div className="flex items-center gap-3"><div className="w-3 h-3 rounded-full" style={{backgroundColor: item.color}}></div><span className="font-bold text-slate-200">{item.name}</span></div>
+                                <button onClick={() => {if(confirm('Delete?')) { setItems(items.filter(i=>i.id!==item.id)); setLogs(logs.filter(l=>l.itemId!==item.id)); }}} className="text-red-400 p-2"><Icon name="trash-2" size={18} /></button>
+                            </div>
+                        ))}
+                    </div>
+                    <button onClick={() => {
+                        const blob = new Blob([JSON.stringify({items, logs})], {type: 'application/json'});
+                        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'omnitrack_backup.json'; a.click();
+                    }} className="w-full bg-slate-800 text-slate-300 font-bold py-4 rounded-xl border border-dark-border flex items-center justify-center gap-2"><Icon name="download" /> Export Data</button>
                 </div>
             );
         };
 
-        // --- APP ROOT ---
-
         const App = () => {
-            // Setup PWA
             usePWAInitialization();
-
-            // State
-            const [view, setView] = useState('track'); // track, dashboard, settings
+            const [view, setView] = useState('track');
             const [items, setItems] = useState([]);
             const [logs, setLogs] = useState([]);
-            const [isLoaded, setIsLoaded] = useState(false);
             const [installPrompt, setInstallPrompt] = useState(null);
+            const [isStandalone, setIsStandalone] = useState(false);
 
-            // Install Prompt Listener
             useEffect(() => {
-                const handler = (e) => {
-                    e.preventDefault();
-                    setInstallPrompt(e);
-                };
+                const handler = (e) => { e.preventDefault(); setInstallPrompt(e); };
                 window.addEventListener('beforeinstallprompt', handler);
-                return () => window.removeEventListener('beforeinstallprompt', handler);
-            }, []);
-
-            // Load from LocalStorage
-            useEffect(() => {
+                setIsStandalone(window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true);
                 const savedItems = localStorage.getItem('omni_items');
                 const savedLogs = localStorage.getItem('omni_logs');
                 if (savedItems) setItems(JSON.parse(savedItems));
                 if (savedLogs) setLogs(JSON.parse(savedLogs));
-                
-                // Initialize icons
-                if(window.lucide) window.lucide.createIcons();
-                setIsLoaded(true);
             }, []);
 
-            // Save to LocalStorage
             useEffect(() => {
-                if (isLoaded) {
-                    localStorage.setItem('omni_items', JSON.stringify(items));
-                    localStorage.setItem('omni_logs', JSON.stringify(logs));
-                }
-            }, [items, logs, isLoaded]);
+                localStorage.setItem('omni_items', JSON.stringify(items));
+                localStorage.setItem('omni_logs', JSON.stringify(logs));
+            }, [items, logs]);
 
-            // Logic
             const addLog = (itemId, value) => {
-                const newLog = {
-                    id: generateId(),
-                    itemId,
-                    value,
-                    timestamp: new Date().toISOString()
-                };
-                setLogs(prev => [...prev, newLog]);
-                // Haptic feedback pattern if available
-                if (window.navigator && window.navigator.vibrate) {
-                    window.navigator.vibrate(50);
-                }
+                setLogs(prev => [...prev, { id: generateId(), itemId, value, timestamp: new Date().toISOString() }]);
+                if (navigator.vibrate) navigator.vibrate(50);
             };
-
-            // Icon refresher when view changes
-            useEffect(() => {
-                if(window.lucide) window.lucide.createIcons();
-            }, [view]);
 
             return (
                 <div className="max-w-md mx-auto min-h-screen relative flex flex-col bg-dark-bg safe-top">
-                    
-                    {/* Header */}
-                    <header className="px-6 py-6 flex items-center justify-between sticky top-0 bg-dark-bg/95 backdrop-blur-md z-40 border-b border-slate-800/50">
-                        <div className="flex items-center gap-2 text-brand-500">
-                            <Icon name="activity" className="text-brand-500" />
-                            <h1 className="text-2xl font-black tracking-tight text-white">OmniTrack</h1>
-                        </div>
+                    <header className="px-6 py-6 flex justify-between sticky top-0 bg-dark-bg/95 backdrop-blur-md z-40 border-b border-dark-border">
+                        <div className="flex items-center gap-2 text-brand-500"><Icon name="activity" /><h1 className="text-2xl font-black text-white tracking-tight">OmniTrack</h1></div>
                     </header>
-
-                    {/* Main Content Area */}
                     <main className="flex-1 px-4 pt-6 overflow-y-auto scroll-smooth safe-bottom">
-                        {view === 'track' && (
-                            <div className="space-y-4 pb-24 animate-[fadeIn_0.3s_ease-out]">
-                                {items.length === 0 ? (
-                                    <div className="text-center py-20 px-6">
-                                        <div className="bg-slate-800 inline-flex p-4 rounded-full mb-4 text-slate-400">
-                                            <Icon name="list-plus" size={32} />
-                                        </div>
-                                        <h2 className="text-xl font-bold text-white mb-2">Start Tracking</h2>
-                                        <p className="text-slate-400 mb-6">You haven't created any metrics yet. Go to settings to set up your first tracker.</p>
-                                        <button onClick={() => setView('settings')} className="bg-brand-600 text-white px-6 py-3 rounded-xl font-bold">Go to Settings</button>
-                                    </div>
-                                ) : (
-                                    items.map(item => (
-                                        <TrackerCard key={item.id} item={item} logs={logs} onAdd={addLog} />
-                                    ))
-                                )}
-                            </div>
-                        )}
-
+                        {view === 'track' && <div className="space-y-4 pb-24 animate-fade-in">
+                            {items.length === 0 ? <div className="text-center py-20 px-6 text-slate-400"><p className="mb-4">No metrics yet.</p><button onClick={()=>setView('settings')} className="bg-brand-600 text-white px-6 py-3 rounded-xl font-bold">Create One</button></div> : items.map(i => <TrackerCard key={i.id} item={i} logs={logs} onAdd={addLog} />)}
+                        </div>}
                         {view === 'dashboard' && <Dashboard items={items} logs={logs} />}
-                        
-                        {view === 'settings' && <Settings items={items} setItems={setItems} logs={logs} setLogs={setLogs} installPrompt={installPrompt} />}
+                        {view === 'settings' && <Settings items={items} setItems={setItems} logs={logs} setLogs={setLogs} installPrompt={installPrompt} isStandalone={isStandalone} />}
                     </main>
-
-                    {/* Bottom Navigation */}
-                    <nav className="fixed bottom-0 w-full max-w-md bg-dark-card border-t border-slate-800 pb-[env(safe-area-inset-bottom)] z-50">
+                    <nav className="fixed bottom-0 w-full max-w-md bg-dark-card border-t border-dark-border pb-[env(safe-area-inset-bottom)] z-50">
                         <div className="flex justify-around items-center h-16">
-                            <button 
-                                onClick={() => setView('track')}
-                                className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${view === 'track' ? 'text-brand-500' : 'text-slate-500 hover:text-slate-300'}`}
-                            >
-                                <Icon name="check-square" size={24} />
-                                <span className="text-[10px] font-bold uppercase tracking-wide">Track</span>
-                            </button>
-                            <button 
-                                onClick={() => setView('dashboard')}
-                                className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${view === 'dashboard' ? 'text-brand-500' : 'text-slate-500 hover:text-slate-300'}`}
-                            >
-                                <Icon name="bar-chart-2" size={24} />
-                                <span className="text-[10px] font-bold uppercase tracking-wide">Stats</span>
-                            </button>
-                            <button 
-                                onClick={() => setView('settings')}
-                                className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${view === 'settings' ? 'text-brand-500' : 'text-slate-500 hover:text-slate-300'}`}
-                            >
-                                <Icon name="settings" size={24} />
-                                <span className="text-[10px] font-bold uppercase tracking-wide">Data</span>
-                            </button>
+                            {['track', 'dashboard', 'settings'].map(v => (
+                                <button key={v} onClick={() => setView(v)} className={`flex flex-col items-center w-full transition-colors ${view === v ? 'text-brand-500' : 'text-slate-500'}`}>
+                                    <Icon name={v === 'track' ? 'check-square' : v === 'dashboard' ? 'bar-chart-2' : 'settings'} size={24} />
+                                    <span className="text-[10px] font-bold uppercase mt-1">{v}</span>
+                                </button>
+                            ))}
                         </div>
                     </nav>
                 </div>
             );
         };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     </script>
 </body>
 </html>
