@@ -59,6 +59,7 @@
         const usePWAInitialization = () => {
             useEffect(() => {
                 const initPWA = async () => {
+                    // 1. Generate Icon
                     const canvas = document.createElement('canvas');
                     canvas.width = 512; canvas.height = 512;
                     const ctx = canvas.getContext('2d');
@@ -72,6 +73,7 @@
                     document.getElementById('dynamic-favicon').href = iconUrl;
                     document.getElementById('dynamic-apple-icon').href = iconUrl;
 
+                    // 2. Generate Manifest
                     const manifest = {
                         "name": "OmniTrack", "short_name": "OmniTrack", "start_url": window.location.href,
                         "display": "standalone", "background_color": "#0f172a", "theme_color": "#0f172a",
@@ -80,8 +82,86 @@
                     const manifestBlob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
                     document.querySelector('#dynamic-manifest').setAttribute('href', URL.createObjectURL(manifestBlob));
 
+                    // 3. Register Smart Service Worker (Caching + Updates)
                     if ('serviceWorker' in navigator) {
-                        const swCode = `self.addEventListener('fetch', (e) => e.respondWith(fetch(e.request)));`;
+                        const swCode = `
+                            const CACHE_NAME = 'omnitrack-cache-v1';
+                            const WEEK_IN_MS = 7 * 24 * 60 * 60 * 1000;
+                            
+                            self.addEventListener('install', (event) => self.skipWaiting());
+                            self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
+
+                            // Helper to fetch from network and update cache + timestamp
+                            async function fetchAndCache(request, cache) {
+                                const networkResponse = await fetch(request);
+                                if (networkResponse.status === 200) {
+                                    await cache.put(request, networkResponse.clone());
+                                    // Store the current timestamp as a virtual file
+                                    await cache.put(new Request('/_last_update_check'), new Response(Date.now().toString()));
+                                }
+                                return networkResponse;
+                            }
+
+                            self.addEventListener('fetch', (event) => {
+                                const url = new URL(event.request.url);
+                                
+                                // Strategy 1: App Shell (HTML) - Check for updates only once a week
+                                if (event.request.mode === 'navigate' || (location.origin === url.origin && url.pathname.endsWith('.html'))) {
+                                     event.respondWith((async () => {
+                                        const cache = await caches.open(CACHE_NAME);
+                                        const cachedResponse = await cache.match(event.request);
+                                        
+                                        // Case A: First time load (No cache) -> Must go network
+                                        if (!cachedResponse) {
+                                            try { return await fetchAndCache(event.request, cache); }
+                                            catch (e) { return new Response('Offline: Connect to internet first.', { status: 503 }); }
+                                        }
+
+                                        // Case B: Check if our 7-day timer has expired
+                                        const lastCheckRes = await cache.match(new Request('/_last_update_check'));
+                                        let isExpired = true;
+                                        
+                                        if (lastCheckRes) {
+                                            const lastTime = await lastCheckRes.text();
+                                            if (Date.now() - parseInt(lastTime) < WEEK_IN_MS) {
+                                                isExpired = false;
+                                            }
+                                        }
+
+                                        // Case C: If expired, try network. If valid or offline, use cache.
+                                        if (isExpired) {
+                                            try {
+                                                return await fetchAndCache(event.request, cache);
+                                            } catch (e) {
+                                                console.log('Update check failed (offline), using cache.');
+                                                return cachedResponse; // Fallback to cache if offline
+                                            }
+                                        } else {
+                                            return cachedResponse;
+                                        }
+                                     })());
+                                     return;
+                                }
+
+                                // Strategy 2: Cache First (for Libraries/CDNs)
+                                // This saves React, Chart.js, etc. locally so you don't need internet.
+                                if (['unpkg.com', 'cdn.jsdelivr.net', 'cdn.tailwindcss.com'].some(domain => url.hostname.includes(domain))) {
+                                    event.respondWith(
+                                        caches.match(event.request).then((cachedResponse) => {
+                                            if (cachedResponse) return cachedResponse;
+                                            return fetch(event.request).then((networkResponse) => {
+                                                return caches.open(CACHE_NAME).then((cache) => {
+                                                    cache.put(event.request, networkResponse.clone());
+                                                    return networkResponse;
+                                                });
+                                            });
+                                        })
+                                    );
+                                } else {
+                                    event.respondWith(fetch(event.request));
+                                }
+                            });
+                        `;
                         const swBlob = new Blob([swCode], {type: 'application/javascript'});
                         try { await navigator.serviceWorker.register(URL.createObjectURL(swBlob)); } catch (e) {}
                     }
